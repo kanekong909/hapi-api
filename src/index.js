@@ -7,6 +7,7 @@ const { testConnection } = require('./db/pool');
 const movimientosRouter = require('./routes/movimientos');
 const statsRouter = require('./routes/stats');
 const authRouter = require('./routes/auth');
+const trmRouter = require('./routes/trm');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,6 +27,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/movimientos', movimientosRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/trm', trmRouter);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada' });
