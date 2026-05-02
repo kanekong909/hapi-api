@@ -73,9 +73,12 @@ async function getPnL(req, res, next) {
     `, [uid]);
 
     // Agrupar por símbolo
-    const dividendosPorSimbolo = {};
-    for (const d of divRows) {
-      dividendosPorSimbolo[d.simbolo] = parseFloat(d.total_dividendos);
+    const porSimbolo = {};
+    for (const m of rows) {
+      if (!porSimbolo[m.simbolo]) {
+        porSimbolo[m.simbolo] = { nombre: m.nombre, tipo: m.tipo, movimientos: [] };
+      }
+      porSimbolo[m.simbolo].movimientos.push(m);
     }
 
     const resultado = [];
