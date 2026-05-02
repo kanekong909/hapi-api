@@ -176,4 +176,3 @@ async function getPnL(req, res, next) {
 
 module.exports = { getResumen, getPorTipo, getPorActivo, getPnL };
 
-module.exports = { getResumen, getPorTipo, getPorActivo };
