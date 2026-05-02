@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const { testConnection } = require('./db/pool');
 const movimientosRouter = require('./routes/movimientos');
 const statsRouter = require('./routes/stats');
+const authRouter = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,7 +23,7 @@ app.use(express.json());
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-
+app.use('/api/auth', authRouter);
 app.use('/api/movimientos', movimientosRouter);
 app.use('/api/stats', statsRouter);
 
