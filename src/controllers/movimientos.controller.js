@@ -45,13 +45,13 @@ async function getById(req, res, next) {
 
 async function create(req, res, next) {
   try {
-    const { orden, nombre, simbolo, tipo, valor_usd, valor_cop, trm, fecha, hora, notas } = req.body;
+    const { orden, nombre, simbolo, tipo, valor_usd, valor_cop, trm, fecha, hora, cantidad, notas } = req.body;
     const { rows } = await pool.query(
-      `INSERT INTO movimientos (usuario_id, orden, nombre, simbolo, tipo, valor_usd, valor_cop, trm, fecha, hora, notas)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+      `INSERT INTO movimientos (usuario_id, orden, nombre, simbolo, tipo, valor_usd, valor_cop, trm, fecha, hora, cantidad, notas)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
       [req.usuarioId, orden, nombre, simbolo, tipo,
-       parseFloat(valor_usd), parseFloat(valor_cop), parseFloat(trm),
-       fecha, hora || '00:00:00', notas || null]
+      parseFloat(valor_usd), parseFloat(valor_cop), parseFloat(trm),
+      fecha, hora || '00:00:00', parseFloat(cantidad) || 1, notas || null]
     );
     res.status(201).json(rows[0]);
   } catch (err) { next(err); }
@@ -59,16 +59,16 @@ async function create(req, res, next) {
 
 async function update(req, res, next) {
   try {
-    const { orden, nombre, simbolo, tipo, valor_usd, valor_cop, trm, fecha, hora, notas } = req.body;
+    const { orden, nombre, simbolo, tipo, valor_usd, valor_cop, trm, fecha, hora, cantidad, notas } = req.body;
     const { rows } = await pool.query(
       `UPDATE movimientos
-       SET orden=$1, nombre=$2, simbolo=$3, tipo=$4,
-           valor_usd=$5, valor_cop=$6, trm=$7, fecha=$8, hora=$9, notas=$10
-       WHERE id=$11 AND usuario_id=$12 RETURNING *`,
+      SET orden=$1, nombre=$2, simbolo=$3, tipo=$4,
+          valor_usd=$5, valor_cop=$6, trm=$7, fecha=$8, hora=$9, cantidad=$10, notas=$11
+      WHERE id=$12 AND usuario_id=$13 RETURNING *`,
       [orden, nombre, simbolo, tipo,
-       parseFloat(valor_usd), parseFloat(valor_cop), parseFloat(trm),
-       fecha, hora || '00:00:00', notas || null,
-       req.params.id, req.usuarioId]
+      parseFloat(valor_usd), parseFloat(valor_cop), parseFloat(trm),
+      fecha, hora || '00:00:00', parseFloat(cantidad) || 1, notas || null,
+      req.params.id, req.usuarioId]
     );
     if (!rows.length) return res.status(404).json({ error: 'Movimiento no encontrado' });
     res.json(rows[0]);
