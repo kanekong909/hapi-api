@@ -65,28 +65,17 @@ async function getPnL(req, res, next) {
   try {
     const uid = req.usuarioId;
 
-    const { rows } = await pool.query(`
-      SELECT
-        simbolo,
-        nombre,
-        tipo,
-        orden,
-        cantidad,
-        valor_usd,
-        fecha,
-        hora
-      FROM movimientos
-      WHERE usuario_id = $1
-      ORDER BY simbolo, fecha ASC, hora ASC, created_at ASC
+    const { rows: divRows } = await pool.query(`
+      SELECT simbolo, SUM(monto_neto) as total_dividendos
+      FROM transacciones
+      WHERE usuario_id = $1 AND tipo = 'DIVIDENDO' AND simbolo IS NOT NULL
+      GROUP BY simbolo
     `, [uid]);
 
     // Agrupar por símbolo
-    const porSimbolo = {};
-    for (const m of rows) {
-      if (!porSimbolo[m.simbolo]) {
-        porSimbolo[m.simbolo] = { nombre: m.nombre, tipo: m.tipo, movimientos: [] };
-      }
-      porSimbolo[m.simbolo].movimientos.push(m);
+    const dividendosPorSimbolo = {};
+    for (const d of divRows) {
+      dividendosPorSimbolo[d.simbolo] = parseFloat(d.total_dividendos);
     }
 
     const resultado = [];
