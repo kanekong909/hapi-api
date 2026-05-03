@@ -110,66 +110,31 @@ async function getPnL(req, res, next) {
     const resultado = [];
 
     for (const [simbolo, data] of Object.entries(porSimbolo)) {
-      const movimientos = data.movimientos;
+      let totalInvertido   = 0;
+      let totalVendido     = 0;
+      let cantidadComprada = 0;
+      let cantidadVendida  = 0;
 
-      // Cola FIFO: cada entrada es { cantidad, costoTotal }
-      const colaCompras = [];
-      let gananciaRealizada = 0;
-      let cantidadEnMano    = 0;
-      let totalInvertido    = 0;
-      let totalVendido      = 0;
-      let cantidadComprada  = 0;
-      let cantidadVendida   = 0;
-
-      for (const m of movimientos) {
+      for (const m of data.movimientos) {
         const cantidad = parseFloat(m.cantidad);
-        const valorUsd = parseFloat(m.valor_usd); // siempre es el total pagado/recibido
+        const valor    = parseFloat(m.valor_usd);
 
         if (m.orden === 'COMPRA') {
-          colaCompras.push({ cantidad, costoTotal: valorUsd });
-          cantidadEnMano   += cantidad;
-          totalInvertido   += valorUsd;
+          totalInvertido   += valor;
           cantidadComprada += cantidad;
-
         } else {
-          // VENTA
-          // precio por unidad de esta venta
-          const precioVentaUnitario = cantidad > 0 ? valorUsd / cantidad : 0;
-
-          let cantidadPorVender = cantidad;
-          let costoBaseFIFO     = 0;
-          totalVendido   += valorUsd;
-          cantidadVendida += cantidad;
-          cantidadEnMano  -= cantidad;
-
-          while (cantidadPorVender > 0 && colaCompras.length > 0) {
-            const lote = colaCompras[0];
-            const precioCompraUnitario = lote.cantidad > 0 ? lote.costoTotal / lote.cantidad : 0;
-
-            if (lote.cantidad <= cantidadPorVender) {
-              // Consumir lote completo
-              costoBaseFIFO     += lote.costoTotal;
-              cantidadPorVender -= lote.cantidad;
-              colaCompras.shift();
-            } else {
-              // Consumir parte del lote
-              const fraccionCosto    = precioCompraUnitario * cantidadPorVender;
-              costoBaseFIFO         += fraccionCosto;
-              lote.cantidad         -= cantidadPorVender;
-              lote.costoTotal       -= fraccionCosto;
-              cantidadPorVender      = 0;
-            }
-          }
-
-          gananciaRealizada += valorUsd - costoBaseFIFO;
+          totalVendido     += valor;
+          cantidadVendida  += cantidad;
         }
       }
 
-      // Costo promedio de lo que queda en mano
-      const costoRestante  = colaCompras.reduce((s, l) => s + l.costoTotal, 0);
-      const precioPromedio = cantidadEnMano > 0 ? costoRestante / cantidadEnMano : 0;
-      const pnlPorcentaje  = totalInvertido > 0 ? (gananciaRealizada / totalInvertido) * 100 : 0;
-      const dividendos     = dividendosPorSimbolo[simbolo] || 0;
+      const cantidadEnMano    = cantidadComprada - cantidadVendida;
+      const ganancia          = totalVendido - totalInvertido;
+      const pnlPorcentaje     = totalInvertido > 0 ? (ganancia / totalInvertido) * 100 : 0;
+      const precioPromedio    = cantidadEnMano > 0
+        ? (totalInvertido - totalVendido) / cantidadEnMano  // costo neto restante / unidades en mano
+        : 0;
+      const dividendos        = dividendosPorSimbolo[simbolo] || 0;
 
       resultado.push({
         simbolo,
@@ -180,12 +145,12 @@ async function getPnL(req, res, next) {
         cantidad_en_mano:       parseFloat(cantidadEnMano.toFixed(8)),
         total_invertido_usd:    parseFloat(totalInvertido.toFixed(4)),
         total_vendido_usd:      parseFloat(totalVendido.toFixed(4)),
-        ganancia_realizada_usd: parseFloat(gananciaRealizada.toFixed(4)),
-        ganancia_total_usd:     parseFloat((gananciaRealizada + dividendos).toFixed(4)),
+        ganancia_realizada_usd: parseFloat(ganancia.toFixed(4)),
+        ganancia_total_usd:     parseFloat((ganancia + dividendos).toFixed(4)),
         precio_promedio_usd:    parseFloat(precioPromedio.toFixed(4)),
         pnl_porcentaje:         parseFloat(pnlPorcentaje.toFixed(2)),
         dividendos_usd:         parseFloat(dividendos.toFixed(4)),
-        movimientos: movimientos.map(m => ({
+        movimientos: data.movimientos.map(m => ({
           orden:     m.orden,
           cantidad:  parseFloat(m.cantidad),
           valor_usd: parseFloat(m.valor_usd),
